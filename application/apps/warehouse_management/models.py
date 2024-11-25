@@ -9,7 +9,7 @@ class Category(models.Model):
         on_delete=models.CASCADE,
         null=True,
         blank=True,
-        verbose_name="Подкатегория",
+        verbose_name="Родительская категория",
     )
 
     def __str__(self) -> str:
