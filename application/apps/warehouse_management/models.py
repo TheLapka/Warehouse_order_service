@@ -36,6 +36,11 @@ class Product(models.Model):
     class Meta:
         verbose_name = "Товар"
         verbose_name_plural = "Товары"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["name", "supplier"], name="unique_product_constraint"
+            )
+        ]
 
 
 class Stock(models.Model):

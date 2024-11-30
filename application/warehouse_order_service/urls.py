@@ -28,7 +28,7 @@ urlpatterns = [
     # Админка
     path("admin/", admin.site.urls),
     path("supplier_managemet/", include("apps.supplier_management.urls")),
-    # path('apps/', include("apps.weather_forecast.urls")),
+    path("products/", include("apps.warehouse_management.urls")),
     # Swagger
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path(

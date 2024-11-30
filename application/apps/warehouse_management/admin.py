@@ -11,7 +11,7 @@ class ProductAdmin(admin.ModelAdmin):
 
 
 class StockAdmin(admin.ModelAdmin):
-    list_display = ("product", "amount")
+    list_display = ("id", "product", "amount")
 
 
 admin.site.register(Category, CategoryAdmin)
