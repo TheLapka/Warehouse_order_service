@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     "drf_spectacular",
     "apps.supplier_management",
     "apps.warehouse_management",
+    "apps.user_and_email_manager",
 ]
 
 MIDDLEWARE = [
@@ -59,7 +60,9 @@ ROOT_URLCONF = "warehouse_order_service.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [
+            os.path.join(BASE_DIR, "templates/"),
+        ],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -109,6 +112,12 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+AUTH_USER_MODEL = "user_and_email_manager.CustomUser"
+
+EMAIL_CONFIRMATION_TIMEOUT = int(
+    os.getenv("EMAIL_CONFIRMATION_TIMEOUT", 60 * 60 * 24 * 2)
+)
+
 REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "PAGE_SIZE": 10,
@@ -153,3 +162,15 @@ CACHES = {
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND", 'djcelery_email.backends.CeleryEmailBackend')
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_USE_SSL = bool(int(os.environ.get("EMAIL_USE_SSL", "0")))
+EMAIL_USE_TLS = bool(int(os.environ.get("EMAIL_USE_TLS", "1")))
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.mail.ru")
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", 2525))
+EMAIL_TIMEOUT = 4
+SERVER_EMAIL = EMAIL_HOST_USER
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
