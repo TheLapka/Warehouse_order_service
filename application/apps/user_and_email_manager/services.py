@@ -6,6 +6,7 @@ from apps.user_and_email_manager.email_gateway import EmailGateway
 from apps.user_and_email_manager.models import CustomUser
 from django.contrib.auth.hashers import make_password
 from django.core.cache import cache
+from django.db import DatabaseError, transaction
 from rest_framework.serializers import ValidationError
 
 
@@ -24,7 +25,7 @@ class SendVerificationCode:
 
 
 class RegistrationCreate:
-    def create_user(self, data):
+    def create_user(self, data: dict) -> None:
         users = CustomUser.objects.filter(email=data["email"]).first()
         if users is None:
             if data["password_1"] != data["password_2"]:
@@ -43,23 +44,29 @@ class RegistrationCreate:
             )
         else:
             raise ValidationError(detail="Email уже используется")
+        
+class EmailConfirmationService:
+    def email_cofirm(self, email:str, code:str)->None:
+        codes = cache.get(email) == code
+        if codes:
+            cache.delete(email)
+            CustomUser.objects.filter(email=email).update(is_confired=True)
+        else:
+            raise ValidationError(
+                {"detail": "Проверка не пройдена, заново запросите код."}
+            )
 
 
 class SendResetPasswordEmail:
-    def send_reset_pass(self, data):
+    def send_reset_pass(self, data: dict) -> None:
         user = CustomUser.objects.filter(email=data["email"]).first()
         if user is None:
             raise ValidationError(
                 {"detail": "Пользователя с таким Email не существует."}
             )
 
-        code = "".join([str(random.randint(0, 9)) for _ in range(6)])
-        cache.set(user.email, value=code, timeout=300)
-
-        EmailGateway().send_email(
-            purpose="verify_email",
-            email=user.email,
-            code=code,
+        SendVerificationCode().generate_and_send_code_according_to_condition(
+            email=user.email, timeout=TIME_OUTS["confirmation_time"]
         )
 
 
@@ -72,7 +79,7 @@ class PasswordResetService:
             return key
         raise ValidationError({"detail": "Неверный код"})
 
-    def reset_password(self, key: UUID, password: str):
+    def reset_password(self, key: UUID, password: str) -> None:
         email = cache.get(f"{key}-passed")
         if not email:
             raise ValidationError(
@@ -82,5 +89,5 @@ class PasswordResetService:
         user = CustomUser.objects.filter(email=email)
         cache.delete(f"{key}-passed")
         user.update(password=make_password(password))
-
-        # Сделать подтверждение регистрации, авторизация jwt token
+        
+        

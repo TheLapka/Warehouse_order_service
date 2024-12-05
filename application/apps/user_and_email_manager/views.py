@@ -1,12 +1,14 @@
 from apps.user_and_email_manager.models import CustomUser
 from apps.user_and_email_manager.serializers import (
     CheckRestPasswordCodeSerializer,
+    EmailConfirmationSerializer,
     ProfileModelSerializer,
     RegistrationSerializer,
     ResetPasswordSerializer,
     SendResetPasswordCodeSerializer,
 )
 from apps.user_and_email_manager.services import (
+    EmailConfirmationService,
     PasswordResetService,
     RegistrationCreate,
     SendResetPasswordEmail,
@@ -31,6 +33,20 @@ class RegistrationView(GenericAPIView):
         creator = RegistrationCreate()
         creator.create_user(sz.data)
         return Response(status=status.HTTP_201_CREATED)
+    
+class EmailСonfirmationView(GenericAPIView):
+    serializer_class = EmailConfirmationSerializer
+    permission_classes = (IsAuthenticated,)
+    
+    def post(self, request):
+        sz = EmailConfirmationSerializer(data=request.data)
+        sz.is_valid(raise_exception=True)
+
+        conf_acc = EmailConfirmationService()
+        conf_acc.email_cofirm(request.user.email, sz.data["code"])
+        return Response(status=status.HTTP_200_OK)
+
+
 
 
 class UserViewSet(RetrieveModelMixin, UpdateModelMixin, GenericViewSet):

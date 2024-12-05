@@ -10,18 +10,26 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
+from datetime import timedelta
 import os
 from pathlib import Path
+
+from django.conf import settings
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+SECRET_KEY = os.getenv(
+    "DJANGO_SECRET_KEY",
+    default="django-insecure-e)a)ob*fi^52i=2_7if28+q9pz_*8uicg)k*1zak3h)=cy=syg",
+)
+
+# JWT_PRIVATE_KEY = os.getenv("JWT_PRIVATE_KEY")
+# JWT_PUBLIC_KEY = os.getenv("JWT_PUBLIC_KEY")
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-y5i@k=!0z%fgdx01n=7%aya3e&d26hi#aovwogc759_%xf$fo="
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -39,10 +47,12 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
+    "rest_framework_simplejwt",
     "drf_spectacular",
     "apps.supplier_management",
     "apps.warehouse_management",
     "apps.user_and_email_manager",
+    "apps.order_manageement",
 ]
 
 MIDDLEWARE = [
@@ -56,6 +66,16 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = "warehouse_order_service.urls"
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=365),
+    "ALGORITHM": "HS256",
+    "SIGNING_KEY": SECRET_KEY,
+    "VERIFYING_KEY": None,
+    "BLACKLIST_AFTER_ROTATION": False,
+    "ROTATE_REFRESH_TOKENS": True,
+}
 
 TEMPLATES = [
     {
@@ -121,6 +141,9 @@ EMAIL_CONFIRMATION_TIMEOUT = int(
 REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "PAGE_SIZE": 10,
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework_simplejwt.authentication.JWTAuthentication"
+    ],
 }
 
 SPECTACULAR_SETTINGS = {

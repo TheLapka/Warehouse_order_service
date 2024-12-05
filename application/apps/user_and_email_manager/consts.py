@@ -7,4 +7,4 @@ PURPOSE_MAPPING = {
 }
 
 
-TIME_OUTS = {"time_for_confirmation": 172800, "time_to_warn": 86400}
+TIME_OUTS = {"time_for_confirmation": 172800, "time_to_warn": 86400, "confirmation_time": 300}

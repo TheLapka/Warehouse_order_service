@@ -68,3 +68,6 @@ class ResetPasswordSerializer(serializers.Serializer):
         except ValidationError as exc:
             raise serializers.ValidationError(str(exc))
         return value
+
+class EmailConfirmationSerializer(serializers.Serializer):
+    code = serializers.CharField()

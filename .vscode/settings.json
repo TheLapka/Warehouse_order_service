@@ -13,6 +13,7 @@
         "./application/apps/user_and_email_manager",
         "./application/apps/user_and_email_manager",
         "./application/apps/user_and_email_manager",
-        "./application/apps/user_and_email_manager"
+        "./application/apps/user_and_email_manager",
+        "./application"
     ]
 }
