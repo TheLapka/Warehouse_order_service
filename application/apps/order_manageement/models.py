@@ -1,6 +1,7 @@
-from django.db import models
 from apps.user_and_email_manager.models import CustomUser
 from apps.warehouse_management.models import Product
+from django.db import models
+
 
 class Order(models.Model):
     order_date = models.DateField(auto_now_add=True, verbose_name="Дата заказа")
@@ -29,4 +30,4 @@ class ProductOnOrder(models.Model):
         verbose_name_plural = "Продукты в заказе"
 
     def __str__(self):
-        return self.name
+        return f"{self.order}"
