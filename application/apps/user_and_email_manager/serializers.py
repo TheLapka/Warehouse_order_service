@@ -1,6 +1,7 @@
 from apps.user_and_email_manager.models import CustomUser
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.password_validation import validate_password
+from django.db import DatabaseError, transaction
 from django.forms import ValidationError
 from rest_framework import serializers
 
@@ -47,7 +48,13 @@ class ProfileModelSerializer(serializers.ModelSerializer):
     def update(self, instance: CustomUser, validated_data: dict):
         if "password" in validated_data:
             validated_data["password"] = make_password(validated_data["password"])
-        user = super().update(instance, validated_data)
+        try:
+            with transaction.atomic():
+                user = super().update(instance, validated_data)
+        except DatabaseError as e:
+            raise ValidationError(
+                detail=f"Произошла ошибка при обновлении данных: {str(e)}"
+            )
         return user
 
 
@@ -68,6 +75,7 @@ class ResetPasswordSerializer(serializers.Serializer):
         except ValidationError as exc:
             raise serializers.ValidationError(str(exc))
         return value
+
 
 class EmailConfirmationSerializer(serializers.Serializer):
     code = serializers.CharField()

@@ -3,6 +3,7 @@ from apps.order_manageement.models import Order, ProductOnOrder
 from apps.order_manageement.repositories import ProductInOrderRep
 from apps.user_and_email_manager.email_gateway import EmailGateway
 from apps.warehouse_management.models import Stock
+from django.db import DatabaseError, transaction
 from django.db.models import F
 from rest_framework.serializers import ValidationError
 
@@ -18,11 +19,19 @@ class AddProductInOrderService:
         self._checking_existence_of_goods(product_ids, product_in_stock_ids)
         prod_ids_and_amount_mapping = {el.product_id: el.amount for el in data}
         self._checking_the_availability_of_goods(stocks, prod_ids_and_amount_mapping)
-        # with Транзакция
-        self._create_order_and_products_order(user.user_id, data, ids_and_stock_mapping)
-        self._update_amount_products_in_warehouse(
-            data_ids_and_prod_entity_mapping, stocks
-        )
+        try:
+            with transaction.atomic():
+
+                self._create_order_and_products_order(
+                    user.user_id, data, ids_and_stock_mapping
+                )
+                self._update_amount_products_in_warehouse(
+                    data_ids_and_prod_entity_mapping, stocks
+                )
+        except DatabaseError as e:
+            raise ValidationError(
+                detail=f"Произошла ошибка при создании или обновлении данных: {str(e)}"
+            )
 
         self._send_email_after_creating_order(data, user.email)
 
@@ -38,9 +47,9 @@ class AddProductInOrderService:
     def _checking_the_availability_of_goods(self, stocks: list[Stock], dic: dict):
         non_product = []
         for stock in stocks:
-            if stock.amount >= dic[stock.product.pk]:
-                non_product.append(stock.product.pk)
-        if not non_product:
+            if stock.amount <= dic[stock.product.pk]:
+                non_product.append(stock.product.name)
+        if non_product:
             raise ValidationError(
                 detail=f"Проверьте наличие данных товаров {non_product}"
             )
@@ -49,7 +58,16 @@ class AddProductInOrderService:
         self, user_id: int, data: list[ProductInOrderEntity], stocks: dict[int, Stock]
     ):
 
-        order = Order.objects.create(user_id=user_id)
+        try:
+            with transaction.atomic():
+
+                order = Order.objects.create(user_id=user_id)
+
+        except DatabaseError as e:
+            raise ValidationError(
+                detail=f"Произошла ошибка при создании данных: {str(e)}"
+            )
+
         products_on_order = [
             ProductOnOrder(
                 order_id=order.pk,
@@ -59,14 +77,30 @@ class AddProductInOrderService:
             )
             for el in data
         ]
-        ProductOnOrder.objects.bulk_create(products_on_order)
+        try:
+            with transaction.atomic():
+
+                ProductOnOrder.objects.bulk_create(products_on_order)
+
+        except DatabaseError as e:
+            raise ValidationError(
+                detail=f"Произошла ошибка при создании данных: {str(e)}"
+            )
 
     def _update_amount_products_in_warehouse(
-        self, data: dict[int:ProductInOrderEntity], stocks: list[Stock]
+        self, data: dict[int, ProductInOrderEntity], stocks: list[Stock]
     ):
         for stock in stocks:
             stock.amount = F("amount") - data[stock.product.pk].amount
-        Stock.objects.bulk_update(stocks, ["amount"])
+        try:
+            with transaction.atomic():
+
+                Stock.objects.bulk_update(stocks, ["amount"])
+
+        except DatabaseError as e:
+            raise ValidationError(
+                detail=f"Произошла ошибка при обновлении данных: {str(e)}"
+            )
 
     def _send_email_after_creating_order(
         self, data: list[ProductInOrderEntity], email: str

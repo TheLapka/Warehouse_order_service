@@ -40,7 +40,7 @@ class CustomUserAdmin(UserAdmin):
                     "surname",
                     "is_confired",
                 )
-            },  # Убрал отсюда пассворд
+            },
         ),
         (
             _("Permissions"),

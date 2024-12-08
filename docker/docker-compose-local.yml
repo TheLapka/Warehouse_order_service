@@ -38,6 +38,19 @@ services:
     networks:
       - internal
 
+  celery:
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile
+    command: celery -A order_in_cel worker -l info --beat
+    env_file:
+      - .env/
+    depends_on:
+      - redis
+    restart: always
+    networks:
+      - internal
+
   redis:
     image: redis:6.2.13-alpine
     networks:
