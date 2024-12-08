@@ -1,13 +1,28 @@
 PURPOSE_MAPPING = {
     "verify_email": {
-        "subject": "Ваш код подтверждения",
-        "template": "user_and_email_manager/reg.html",
+        "subject": "Ваш код для сброса пароля",
+        "template": "user_and_email_manager/reset_pass.html",
         "context": {"code": str},
     },
     "pay_prod": {
         "subject": "Ваш заказ",
         "template": "user_and_email_manager/order.html",
         "context": {"data"},
+    },
+    "activation_warning": {
+        "subject": "Время на подтверждение аккаунта заканчивается",
+        "template": "user_and_email_manager/order.html",
+        "context": {"data"},
+    },
+    "delete_account": {
+        "subject": "Время на подтверждение аккаунта кончилось, аккаунт удалён",
+        "template": "user_and_email_manager/order.html",
+        "context": {"data"},
+    },
+    "reg_account": {
+        "subject": "Регистрация на складе как пользователь",
+        "template": "user_and_email_manager/reg.html",
+        "context": {"code": str},
     },
 }
 

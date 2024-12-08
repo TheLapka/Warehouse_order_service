@@ -25,7 +25,7 @@ services:
       POSTGRES_USER: Owner
       POSTGRES_PASSWORD: VeryHardPass
       POSTGRES_DB: warehouse_database
-      POSTGRES_PORT: 5432
+      POSTGRES_PORT: 5433
     volumes:
       - postgres_data:/var/lib/postgresql/data/
     #ports:
@@ -35,6 +35,19 @@ services:
       interval: 50s
       timeout: 5s
       retries: 5
+    networks:
+      - internal
+
+  celery:
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile
+    command: celery -A order_in_cel worker -l info --beat
+    env_file:
+      - .env/
+    depends_on:
+      - redis
+    restart: always
     networks:
       - internal
 

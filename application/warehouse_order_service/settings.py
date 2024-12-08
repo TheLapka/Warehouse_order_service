@@ -10,11 +10,11 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
-from datetime import timedelta
 import os
+from datetime import timedelta
 from pathlib import Path
 
-from django.conf import settings
+from celery.schedules import crontab  # type: ignore
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -49,6 +49,8 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
     "drf_spectacular",
+    "django_celery_results",
+    "django_celery_beat",
     "apps.supplier_management",
     "apps.warehouse_management",
     "apps.user_and_email_manager",
@@ -104,12 +106,13 @@ WSGI_APPLICATION = "warehouse_order_service.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql_psycopg2",
-        "NAME": os.environ.get("POSTGRES_DB"),
+        "NAME": os.environ.get("POSTGRES_DB", "warehouse_database"),
         "USER": os.environ.get("POSTGRES_USER"),
         "PASSWORD": os.environ.get("POSTGRES_PASSWORD"),
         "HOST": os.environ.get("POSTGRES_HOST"),
         "PORT": os.environ.get("POSTGRES_PORT"),
         "CONN_MAX_AGE": 0,
+        "TEST": {os.environ.get("POSTGRES_DB"): "warehouse_database"},
     }
 }
 
@@ -153,6 +156,29 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
     # OTHER SETTINGS
 }
+
+REDIS_HOST = os.environ.get("REDIS_HOST", "127.0.0.1")
+REDIS_PORT = os.environ.get("REDIS_PORT", "6379")
+
+CELERY_BROKER_URL = "redis://" + REDIS_HOST + ":" + REDIS_PORT + "/0"
+CELERY_RESULT_BACKEND = "redis://" + REDIS_HOST + ":" + REDIS_PORT + "/0"
+
+CELERY_BROKER_TRANSPORT_OPTIONS = {"visibility_timeout": 3600}
+CELERY_ACCEPT_CONTENT = ["application/json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+
+
+CELERY_BEAT_SCHEDULE = {
+    "send_warning_letter": {
+        "task": "apps.user_and_email_manager.task.send_warning_letter",
+        "schedule": crontab(hour=12, minute=0),
+    },
+    "send_and_del_user": {
+        "task": "apps.user_and_email_manager.task.send_and_del_user",
+        "schedule": crontab(hour=12, minute=0),
+    },
+}
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
 
@@ -186,7 +212,6 @@ CACHES = {
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND", 'djcelery_email.backends.CeleryEmailBackend')
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_USE_SSL = bool(int(os.environ.get("EMAIL_USE_SSL", "0")))
 EMAIL_USE_TLS = bool(int(os.environ.get("EMAIL_USE_TLS", "1")))

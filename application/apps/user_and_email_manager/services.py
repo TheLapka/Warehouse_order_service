@@ -3,7 +3,7 @@ from uuid import UUID, uuid4
 
 from apps.user_and_email_manager.consts import TIME_OUTS
 from apps.user_and_email_manager.email_gateway import EmailGateway
-from apps.user_and_email_manager.models import CustomUser
+from apps.user_and_email_manager.repository import UserRepository
 from django.contrib.auth.hashers import make_password
 from django.core.cache import cache
 from django.db import DatabaseError, transaction
@@ -18,7 +18,7 @@ class SendVerificationCode:
         cache.set(email, value=code, timeout=timeout)
 
         EmailGateway().send_email(
-            purpose="verify_email",
+            purpose="reg_account",
             email=email,
             code=code,
         )
@@ -26,31 +26,42 @@ class SendVerificationCode:
 
 class RegistrationCreate:
     def create_user(self, data: dict) -> None:
-        users = CustomUser.objects.filter(email=data["email"]).first()
-        if users is None:
+        rep = UserRepository()
+        user = rep.get_user_by_email(email=data["email"])
+        user = user.first()
+        if user is None:
             if data["password_1"] != data["password_2"]:
                 raise ValidationError(detail="Пароли должны совпадать")
             password = data["password_1"]
-            user = CustomUser.objects.create(
-                first_name=data["first_name"],
-                last_name=data["last_name"],
-                surname=data["surname"],
-                email=data["email"],
-                password=make_password(password),
-            )
+            try:
+                with transaction.atomic():
+                    user = rep.create_user_rep(data, password)
+            except DatabaseError as e:
+                raise ValidationError(
+                    detail=f"Произошла ошибка при создании данных: {str(e)}"
+                )
 
             SendVerificationCode().generate_and_send_code_according_to_condition(
                 email=user.email, timeout=TIME_OUTS["time_for_confirmation"]
             )
         else:
             raise ValidationError(detail="Email уже используется")
-        
+
+
 class EmailConfirmationService:
-    def email_cofirm(self, email:str, code:str)->None:
+    def email_cofirm(self, email: str, code: str) -> None:
+        rep = UserRepository()
         codes = cache.get(email) == code
         if codes:
             cache.delete(email)
-            CustomUser.objects.filter(email=email).update(is_confired=True)
+            user = rep.get_user_by_email(email=email)
+            try:
+                with transaction.atomic():
+                    user.update(is_confired=True)
+            except DatabaseError as e:
+                raise ValidationError(
+                    detail=f"Произошла ошибка при обновлении данных: {str(e)}"
+                )
         else:
             raise ValidationError(
                 {"detail": "Проверка не пройдена, заново запросите код."}
@@ -59,7 +70,9 @@ class EmailConfirmationService:
 
 class SendResetPasswordEmail:
     def send_reset_pass(self, data: dict) -> None:
-        user = CustomUser.objects.filter(email=data["email"]).first()
+        rep = UserRepository()
+        user = rep.get_user_by_email(email=data["email"])
+        user = user.first()
         if user is None:
             raise ValidationError(
                 {"detail": "Пользователя с таким Email не существует."}
@@ -80,14 +93,19 @@ class PasswordResetService:
         raise ValidationError({"detail": "Неверный код"})
 
     def reset_password(self, key: UUID, password: str) -> None:
+        rep = UserRepository()
         email = cache.get(f"{key}-passed")
         if not email:
             raise ValidationError(
                 {"detail": "Проверка не пройдена, заново запросите код."}
             )
 
-        user = CustomUser.objects.filter(email=email)
+        user = rep.get_user_by_email(email=email)
         cache.delete(f"{key}-passed")
-        user.update(password=make_password(password))
-        
-        
+        try:
+            with transaction.atomic():
+                user.update(password=make_password(password))
+        except DatabaseError as e:
+            raise ValidationError(
+                detail=f"Произошла ошибка при обновлении данных: {str(e)}"
+            )

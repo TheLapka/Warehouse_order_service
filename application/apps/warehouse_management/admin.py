@@ -7,7 +7,7 @@ class CategoryAdmin(admin.ModelAdmin):
 
 
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ("name", "cat", "price", "supplier")
+    list_display = ("id", "name", "cat", "price", "supplier")
 
 
 class StockAdmin(admin.ModelAdmin):

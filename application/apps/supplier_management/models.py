@@ -5,7 +5,7 @@ class Supplier(models.Model):
     country = models.CharField("Страна", max_length=50)
     city = models.CharField("Город", max_length=50)
     building = models.PositiveIntegerField("Номер здания")
-    name = models.CharField("Наименование организации", max_length=100)
+    name = models.CharField("Наименование организации", max_length=100, unique=True)
 
     class Meta:
         verbose_name = "Поставщик"
